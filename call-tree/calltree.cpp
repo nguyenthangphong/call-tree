@@ -2,6 +2,7 @@
 #include "ui_calltree.h"
 #include <QDebug>
 #include <QProcess>
+#include <QDir>
 
 CallTree::CallTree(QWidget *parent) : QMainWindow(parent), ui(new Ui::CallTree)
 {
@@ -25,6 +26,9 @@ void CallTree::on_runButton_clicked()
     QString currentText = ui->comboBox->currentText();
     QProcess compilerProcess;
     QStringList arguments;
+    QString scriptPath;
+
+    QDir directory(QDir::currentPath());
 
     if (currentText == "Stack Size (-fstack-usage)") {
         m_option = "-fstack-usage";
@@ -34,11 +38,16 @@ void CallTree::on_runButton_clicked()
         m_option = "-fdump-rtl-expand";
     }
 #ifdef Q_OS_LINUX
-    arguments << "compiler.sh" << m_path << m_option;
+    directory.cdUp();
+    scriptPath = directory.absoluteFilePath("compiler.sh");
+    arguments << scriptPath << m_path << m_option;
     compilerProcess.startDetached("/bin/sh", arguments);
 #else
-    arguments << "compiler.bat" << m_path << m_option;
-    compilerProcess.startDetached("cmd.exe", QStringList() << "/C" << arguments.join(" "));
+    directory.cdUp();
+    directory.cdUp();
+    scriptPath = directory.absoluteFilePath("compiler.bat");
+    arguments << "/C" << scriptPath << m_path << m_option;
+    compilerProcess.startDetached("cmd.exe", arguments);
 #endif
     if (!compilerProcess.waitForFinished()) {
         int result = compilerProcess.exitCode();
