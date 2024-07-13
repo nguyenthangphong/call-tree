@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>504</width>
-    <height>174</height>
+    <height>182</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,23 +37,42 @@
      </layout>
     </item>
     <item>
-     <widget class="QComboBox" name="comboBox">
+     <widget class="QComboBox" name="flagComboBox">
       <item>
        <property name="text">
-        <string>Stack Size (-fstack-usage)</string>
+        <string>Stack Size</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>RTL Expand (-fdump-rtl-expand)</string>
+        <string>RTL Expand</string>
        </property>
       </item>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="runButton">
+     <widget class="QComboBox" name="modeComboBox">
+      <item>
+       <property name="text">
+        <string>Build</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Run</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Clean</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="executeButton">
       <property name="text">
-       <string>Run</string>
+       <string>Execute</string>
       </property>
      </widget>
     </item>
@@ -65,7 +84,7 @@
      <x>0</x>
      <y>0</y>
      <width>504</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
