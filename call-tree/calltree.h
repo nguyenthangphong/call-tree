@@ -4,7 +4,9 @@
 #include <QMainWindow>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <cstdlib>
+#include <QProcess>
+#include <QDir>
+#include "call_tree_type.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class CallTree; }
@@ -17,14 +19,24 @@ class CallTree : public QMainWindow
 public:
     CallTree(QWidget *parent = nullptr);
     ~CallTree();
+    ct_flag_t getFlag(QString flag);
+    ct_mode_t getMode(QString mode);
+    bool compiler_build(QDir *dir, QProcess *process);
+    bool compiler_run(QDir *dir, QProcess *process);
+    bool compiler_clean(QDir *dir, QProcess *process);
+    ct_status_t build();
+    ct_status_t run();
+    ct_status_t clean();
 
 private slots:
     void on_browserButton_clicked();
-    void on_runButton_clicked();
+    void on_executeButton_clicked();
 
 private:
     Ui::CallTree *ui;
     QString m_path;
     QString m_option;
+    ct_mode_t m_mode;
+    ct_flag_t m_flag;
 };
 #endif // CALLTREE_H

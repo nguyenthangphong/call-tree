@@ -16,6 +16,7 @@ set(PROJECT_SOURCES
         main.cpp
         calltree.cpp
         calltree.h
+        call_tree_type.h
         calltree.ui
 )
 
