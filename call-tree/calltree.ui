@@ -16,63 +16,88 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QLabel" name="fileNameLabel">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLabel" name="fileNameLabel">
+          <property name="text">
+           <string>File *.c:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="fileNameLineEdit"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="browserButton">
+          <property name="text">
+           <string>Browser</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="txtLabel">
+          <property name="text">
+           <string>File *.txt (add include path):</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="txtLineEdit"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="txtBrowserButton">
+          <property name="text">
+           <string>Browser</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QComboBox" name="flagComboBox">
+        <item>
+         <property name="text">
+          <string>Stack Size</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>RTL Expand</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="modeComboBox">
+        <item>
+         <property name="text">
+          <string>Build</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Run</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="executeButton">
         <property name="text">
-         <string>File name:</string>
+         <string>Execute</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="fileNameLineEdit"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="browserButton">
-        <property name="text">
-         <string>Browser</string>
-        </property>
-       </widget>
+       <widget class="QTextEdit" name="resultTextEdit"/>
       </item>
      </layout>
-    </item>
-    <item>
-     <widget class="QComboBox" name="flagComboBox">
-      <item>
-       <property name="text">
-        <string>Stack Size</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>RTL Expand</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item>
-     <widget class="QComboBox" name="modeComboBox">
-      <item>
-       <property name="text">
-        <string>Build</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Run</string>
-       </property>
-      </item>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="executeButton">
-      <property name="text">
-       <string>Execute</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QTextEdit" name="textEdit"/>
     </item>
    </layout>
   </widget>
@@ -82,7 +107,7 @@
      <x>0</x>
      <y>0</y>
      <width>758</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

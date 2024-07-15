@@ -29,6 +29,7 @@ public:
 private slots:
     void on_browserButton_clicked();
     void on_executeButton_clicked();
+    void on_txtBrowserButton_clicked();
 
 private:
     Ui::CallTree *ui;
@@ -38,5 +39,6 @@ private:
     ct_flag_t m_flag;
     QString m_directory;
     QString m_file;
+    QString m_txt;
 };
 #endif // CALLTREE_H

@@ -49,10 +49,49 @@ void CallTree::build()
     QProcess process;
     QRegularExpression re;
     QRegularExpressionMatch match;
+    QString txtPath =  ui->txtLineEdit->text();
 
 #ifdef Q_OS_LINUX
-    process->setWorkingDirectory(dir->absolutePath());
-    process->startDetached("/bin/sh", arguments);
+    if (!txtPath.isEmpty()) {
+        re.setPattern("^.*[\\\\/]");
+        match = re.match(m_path);
+        m_directory = match.hasMatch() ? match.captured(0) : "";
+
+        re.setPattern("[^\\\\/]+$");
+        match = re.match(m_path);
+        m_file = match.hasMatch() ? match.captured(0) : "";
+
+        gccArguments << "-c" << m_file;
+
+        QFile file(txtPath);
+
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+
+        QTextStream in(&file);
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            if (line.contains("include")) gccArguments << "-I" + line;
+        }
+
+        gccArguments << m_option;
+    } else {
+        re.setPattern("^.*[\\\\/]");
+        match = re.match(m_path);
+        m_directory = match.hasMatch() ? match.captured(0) : "";
+
+        re.setPattern("[^\\\\/]+$");
+        match = re.match(m_path);
+        m_file = match.hasMatch() ? match.captured(0) : "";
+
+        gccArguments << "-c" << m_file << m_option;
+    }
+
+    qDebug() << "gccArguments = " << gccArguments;
+    qDebug() << "directory = " << m_directory;
+    process.setWorkingDirectory(m_directory);
+    process.start("gcc", gccArguments);
 #elif defined(Q_OS_WIN)
     re.setPattern("^.*[\\\\/]");
     match = re.match(m_path);
@@ -63,6 +102,7 @@ void CallTree::build()
     m_file = match.hasMatch() ? match.captured(0) : "";
 
     gccArguments << "-c" << m_file << m_option;
+
     process.setWorkingDirectory(m_directory);
     process.start("gcc", gccArguments);
 #endif
@@ -116,7 +156,7 @@ void CallTree::run_su_file()
         match = re.match(line);
 
         if (match.hasMatch()) {
-            ui->textEdit->append(match.captured(1) + " " + match.captured(2));
+            ui->resultTextEdit->append(match.captured(1) + " " + match.captured(2));
         }
     }
 }
@@ -148,6 +188,13 @@ void CallTree::on_browserButton_clicked()
     m_path = QFileDialog::getOpenFileName(this, "Open File");
     if (m_path.isEmpty()) return;
     ui->fileNameLineEdit->setText(m_path);
+}
+
+void CallTree::on_txtBrowserButton_clicked()
+{
+    m_txt = QFileDialog::getOpenFileName(this, "Open File");
+    if (m_txt.isEmpty()) return;
+    ui->txtLineEdit->setText(m_txt);
 }
 
 void CallTree::on_executeButton_clicked()
