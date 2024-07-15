@@ -87,21 +87,60 @@ void CallTree::build()
 
 void CallTree::run()
 {
-    // switch (m_flag) {
-    // case FSTACK_USAGE:
-    //     break;
-    // case FDUMP_RTL_EXPAND:
-    //     break;
-    // default:
-    //     break;
-    // }
+    switch (m_flag) {
+    case FSTACK_USAGE:
+        run_su_file();
+        break;
+    case FDUMP_RTL_EXPAND:
+        run_rtl_expand_file();
+        break;
+    default:
+        break;
+    }
+}
 
+void CallTree::run_su_file()
+{
+    QRegularExpression re;
+    QRegularExpressionMatch match;
     QFile file(m_path);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+
+    if (!file.open(QIODevice::ReadOnly))
         return;
 
     QTextStream in(&file);
-    ui->textEdit->setText(in.readAll());
+
+    while (!in.atEnd()) {
+        re.setPattern(":(\\w+)\\t(\\d+)\\t");
+        QString line = in.readLine();
+        match = re.match(line);
+
+        if (match.hasMatch()) {
+            ui->textEdit->append(match.captured(1) + " " + match.captured(2));
+        }
+    }
+}
+
+void CallTree::run_rtl_expand_file()
+{
+    // QRegularExpression re;
+    // QRegularExpressionMatch match;
+    // QFile file(m_path);
+
+    // if (!file.open(QIODevice::ReadOnly))
+    //     return;
+
+    // QTextStream in(&file);
+
+    // while (!in.atEnd()) {
+    //     re.setPattern(":(\\w+)\\t(\\d+)\\t");
+    //     QString line = in.readLine();
+    //     match = re.match(line);
+
+    //     if (match.hasMatch()) {
+    //         ui->textEdit->append(match.captured(1) + " " + match.captured(2));
+    //     }
+    // }
 }
 
 void CallTree::on_browserButton_clicked()

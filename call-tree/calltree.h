@@ -23,6 +23,8 @@ public:
     ct_mode_t getMode(QString mode);
     void build();
     void run();
+    void run_su_file();
+    void run_rtl_expand_file();
 
 private slots:
     void on_browserButton_clicked();
