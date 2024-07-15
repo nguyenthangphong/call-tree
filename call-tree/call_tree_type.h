@@ -2,7 +2,7 @@
 #define CALL_TREE_TYPE_H
 
 enum ct_mode_t {
-    MODE_ERROR, BUILD, RUN, CLEAN
+    MODE_ERROR, BUILD, RUN
 };
 
 enum ct_flag_t {

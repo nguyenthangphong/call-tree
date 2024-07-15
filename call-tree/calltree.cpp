@@ -1,6 +1,7 @@
 #include "calltree.h"
 #include "ui_calltree.h"
-#include <QDebug>
+#include <QRegularExpression>
+#include <QFile>
 
 CallTree::CallTree(QWidget *parent) : QMainWindow(parent), ui(new Ui::CallTree)
 {
@@ -35,8 +36,6 @@ ct_mode_t CallTree::getMode(QString mode)
         res = BUILD;
     } else if (mode == "Run") {
         res = RUN;
-    } else if (mode == "Clean") {
-        res = CLEAN;
     } else {
         res = MODE_ERROR;
     }
@@ -44,148 +43,65 @@ ct_mode_t CallTree::getMode(QString mode)
     return res;
 }
 
-bool CallTree::compiler_build(QDir *dir, QProcess *process)
+void CallTree::build()
 {
-    QStringList arguments;
-    QString scriptPath;
-
-    dir->setCurrent("call-tree/call-tree");
+    QStringList gccArguments;
+    QProcess process;
+    QRegularExpression re;
+    QRegularExpressionMatch match;
 
 #ifdef Q_OS_LINUX
-    if (dir->absolutePath().contains("build")) dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_build.sh");
-    arguments << scriptPath << m_path << m_option;
     process->setWorkingDirectory(dir->absolutePath());
     process->startDetached("/bin/sh", arguments);
-#else
-    dir->cdUp();
-    dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_build.bat");
-    arguments << "/C" << scriptPath << m_path << m_option;
-    process->startDetached("cmd.exe", arguments);
+#elif defined(Q_OS_WIN)
+    re.setPattern("^.*[\\\\/]");
+    match = re.match(m_path);
+    m_directory = match.hasMatch() ? match.captured(0) : "";
+
+    re.setPattern("[^\\\\/]+$");
+    match = re.match(m_path);
+    m_file = match.hasMatch() ? match.captured(0) : "";
+
+    gccArguments << "-c" << m_file << m_option;
+    process.setWorkingDirectory(m_directory);
+    process.start("gcc", gccArguments);
 #endif
-    return process->waitForFinished();
-}
-
-bool CallTree::compiler_run(QDir *dir, QProcess *process)
-{
-    QStringList arguments;
-    QString scriptPath;
-
-    dir->setCurrent("call-tree/call-tree");
-
-#ifdef Q_OS_LINUX
-    if (dir->absolutePath().contains("build")) dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_run.sh");
-    arguments << scriptPath << m_path << m_option;
-    process->setWorkingDirectory(dir->absolutePath());
-    process->startDetached("/bin/sh", arguments);
-#else
-    dir->cdUp();
-    dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_run.bat");
-    arguments << "/C" << scriptPath << m_path << m_option;
-    process->startDetached("cmd.exe", arguments);
-#endif
-    return process->waitForFinished();
-}
-
-bool CallTree::compiler_clean(QDir *dir, QProcess *process)
-{
-    QStringList arguments;
-    QString scriptPath;
-
-    dir->setCurrent("call-tree/call-tree");
-
-#ifdef Q_OS_LINUX
-    if (dir->absolutePath().contains("build")) dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_clean.sh");
-    arguments << scriptPath << m_option;
-    process->setWorkingDirectory(dir->absolutePath());
-    process->startDetached("/bin/sh", arguments);
-#else
-    dir->cdUp();
-    dir->cdUp();
-    scriptPath = dir->absoluteFilePath("compiler_clean.bat");
-    arguments << "/C" << scriptPath << m_option;
-    process->startDetached("cmd.exe", arguments);
-#endif
-    return process->waitForFinished();
-}
-
-ct_status_t CallTree::build()
-{
-    QProcess compilerProcess;
-    QDir directory;
-    ct_status_t res;
-
-    bool is_build_finished = compiler_build(&directory, &compilerProcess);
-
-    if (!is_build_finished) {
-        int result = compilerProcess.exitCode();
-
-        if (result != 0) {
-            res = STATUS_FAIL;
-            QMessageBox::critical(this, "Call Tree Build", "Build Fail...");
-        } else {
-            res = STATUS_OK;
-            QMessageBox::information(this, "Call Tree Build", "Build Done...");
-        }
-    } else {
-        res = STATUS_ERROR;
-        QMessageBox::critical(nullptr, "Call Tree Build", "Failed to start process");
+    if (!process.waitForStarted()) {
+        QMessageBox::critical(nullptr, "Call Tree", "Failed to start process...");
+        return;
     }
 
-    return res;
-}
-
-ct_status_t CallTree::run()
-{
-    QProcess compilerProcess;
-    QDir directory;
-    ct_status_t res;
-
-    bool is_run_finished = compiler_run(&directory, &compilerProcess);
-
-    if (!is_run_finished) {
-        int result = compilerProcess.exitCode();
-
-        if (result != 0) {
-            res = STATUS_FAIL;
-        } else {
-            res = STATUS_OK;
-        }
-    } else {
-        res = STATUS_ERROR;
+    if (!process.waitForFinished()) {
+        QMessageBox::critical(nullptr, "Call Tree", "Process did not finish...");
+        return;
     }
 
-    return res;
+    int result = process.exitCode();
+
+    if (result != 0) {
+        QMessageBox::critical(nullptr, "Call Tree", "Compilation failed...");
+    } else {
+        QMessageBox::information(nullptr, "Call Tree", "Compilation done...");
+    }
 }
 
-ct_status_t CallTree::clean()
+void CallTree::run()
 {
-    QProcess compilerProcess;
-    QDir directory;
-    ct_status_t res;
+    // switch (m_flag) {
+    // case FSTACK_USAGE:
+    //     break;
+    // case FDUMP_RTL_EXPAND:
+    //     break;
+    // default:
+    //     break;
+    // }
 
-    bool is_clean_finished = compiler_clean(&directory, &compilerProcess);
+    QFile file(m_path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
 
-    if (!is_clean_finished) {
-        int result = compilerProcess.exitCode();
-
-        if (result != 0) {
-            res = STATUS_FAIL;
-            QMessageBox::critical(this, "Call Tree Clean", "Clean Fail...");
-        } else {
-            res = STATUS_OK;
-            QMessageBox::information(this, "Call Tree Clean", "Clean Done...");
-        }
-    } else {
-        res = STATUS_ERROR;
-        QMessageBox::critical(nullptr, "Call Tree Clean", "Failed to start process");
-    }
-
-    return res;
+    QTextStream in(&file);
+    ui->textEdit->setText(in.readAll());
 }
 
 void CallTree::on_browserButton_clicked()
@@ -210,22 +126,14 @@ void CallTree::on_executeButton_clicked()
         m_option = "-fdump-rtl-expand";
     }
 
-    if (m_flag == FSTACK_USAGE) {
-        switch (m_mode) {
-        case BUILD:
-            res = build();
-            break;
-        case RUN:
-            res = run();
-            break;
-        case CLEAN:
-            res = clean();
-            break;
-        default:
-            res = STATUS_ERROR;
-            break;
-        }
+    switch (m_mode) {
+    case BUILD:
+        build();
+        break;
+    case RUN:
+        run();
+        break;
+    default:
+        break;
     }
-
-    qDebug() << "res = " << res;
 }

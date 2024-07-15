@@ -21,12 +21,8 @@ public:
     ~CallTree();
     ct_flag_t getFlag(QString flag);
     ct_mode_t getMode(QString mode);
-    bool compiler_build(QDir *dir, QProcess *process);
-    bool compiler_run(QDir *dir, QProcess *process);
-    bool compiler_clean(QDir *dir, QProcess *process);
-    ct_status_t build();
-    ct_status_t run();
-    ct_status_t clean();
+    void build();
+    void run();
 
 private slots:
     void on_browserButton_clicked();
@@ -38,5 +34,7 @@ private:
     QString m_option;
     ct_mode_t m_mode;
     ct_flag_t m_flag;
+    QString m_directory;
+    QString m_file;
 };
 #endif // CALLTREE_H
