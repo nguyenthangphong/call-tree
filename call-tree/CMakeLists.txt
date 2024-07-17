@@ -19,7 +19,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/form)
 
 set(PROJECT_SOURCES
-    test/main.cpp
+    src/main.cpp
     src/calltree.cpp
     include/calltree.h
     include/call_tree_type.h
