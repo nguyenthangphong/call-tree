@@ -29,13 +29,15 @@ set(SOURCES
 )
 
 set(TESTS
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/unit_test/Test_GetFlag.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit_test/Test_GetMode.cpp
 )
 
 add_executable(run_tests ${TESTS} ${SOURCES} ${HEADERS} ${UIS})
 
 set_target_properties(run_tests PROPERTIES AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../form)
 
-target_link_libraries(run_tests GTest::gtest_main Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(run_tests GTest::gtest_main Qt${QT_VERSION_MAJOR}::Widgets gtest)
 
 gtest_discover_tests(run_tests)
