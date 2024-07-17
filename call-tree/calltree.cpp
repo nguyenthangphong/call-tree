@@ -51,18 +51,18 @@ void CallTree::build()
     QRegularExpressionMatch match;
     QString txtPath =  ui->txtLineEdit->text();
 
+    re.setPattern("^.*[\\\\/]");
+    match = re.match(m_path);
+    m_directory = match.hasMatch() ? match.captured(0) : "";
+
+    re.setPattern("[^\\\\/]+$");
+    match = re.match(m_path);
+    m_file = match.hasMatch() ? match.captured(0) : "";
+
 #ifdef Q_OS_LINUX
     if (!txtPath.isEmpty()) {
-        re.setPattern("^.*[\\\\/]");
-        match = re.match(m_path);
-        m_directory = match.hasMatch() ? match.captured(0) : "";
-
-        re.setPattern("[^\\\\/]+$");
-        match = re.match(m_path);
-        m_file = match.hasMatch() ? match.captured(0) : "";
-
-        gccArguments << "-c" << m_file;
-
+        QFileInfo fileInfo(m_directory);
+        QString parentDir = fileInfo.dir().path();
         QFile file(txtPath);
 
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -73,23 +73,27 @@ void CallTree::build()
         while (!in.atEnd()) {
             QString line = in.readLine();
             if (line.contains("include")) gccArguments << "-I" + line;
+            else {
+                QString projectName = line;
+                int projectIndex = parentDir.indexOf(projectName);
+
+                if (projectIndex != -1) {
+                    QString basePath = parentDir.left(projectIndex);
+                    QString suffix = m_directory.mid(basePath.length() + 1 + projectName.length());
+                    m_directory = basePath + projectName;
+                    qDebug() << "m_directory = " << m_directory;
+                    m_file = suffix + m_file;
+                    qDebug() << "m_file = " << m_file;
+                    gccArguments << "-c" << m_file;
+                }
+            }
         }
 
         gccArguments << m_option;
     } else {
-        re.setPattern("^.*[\\\\/]");
-        match = re.match(m_path);
-        m_directory = match.hasMatch() ? match.captured(0) : "";
-
-        re.setPattern("[^\\\\/]+$");
-        match = re.match(m_path);
-        m_file = match.hasMatch() ? match.captured(0) : "";
-
         gccArguments << "-c" << m_file << m_option;
     }
 
-    qDebug() << "gccArguments = " << gccArguments;
-    qDebug() << "directory = " << m_directory;
     process.setWorkingDirectory(m_directory);
     process.start("gcc", gccArguments);
 #elif defined(Q_OS_WIN)
@@ -141,6 +145,9 @@ void CallTree::run()
 
 void CallTree::run_su_file()
 {
+    // Clear data before read other file
+    ui->resultTextEdit->setText("");
+
     QRegularExpression re;
     QRegularExpressionMatch match;
     QFile file(m_path);
@@ -163,24 +170,62 @@ void CallTree::run_su_file()
 
 void CallTree::run_rtl_expand_file()
 {
-    // QRegularExpression re;
-    // QRegularExpressionMatch match;
-    // QFile file(m_path);
+    // Clear data before read other file
+    ui->resultTextEdit->setText("");
 
-    // if (!file.open(QIODevice::ReadOnly))
-    //     return;
+    QFile file(m_path);
+    QMap<QString, ct_function_data_t> functions;
 
-    // QTextStream in(&file);
+    if (!file.open(QIODevice::ReadOnly))
+        return;
 
-    // while (!in.atEnd()) {
-    //     re.setPattern(":(\\w+)\\t(\\d+)\\t");
-    //     QString line = in.readLine();
-    //     match = re.match(line);
+    QTextStream in(&file);
 
-    //     if (match.hasMatch()) {
-    //         ui->textEdit->append(match.captured(1) + " " + match.captured(2));
-    //     }
-    // }
+    QRegularExpression function("^;; Function (?P<mangle>.*)\\s+\\((?P<function>\\S+)(,.*)?\\).*$");
+    QRegularExpression call("^.*\\(call.*\"(?P<target>.*)\".*$");
+    QRegularExpression symbol_ref("^.*\\(symbol_ref.*\"(?P<target>.*)\".*$");
+    QRegularExpression exclude("R_OSAL|memcpy");
+
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QRegularExpressionMatch match = function.match(line);
+        QString functionName = "";
+        QString target = "";
+
+        if (match.hasMatch()) {
+            functionName = match.captured("function");
+            ui->resultTextEdit->append(functionName);
+
+            if (!functions.contains(functionName) && !exclude.match(functionName).hasMatch()) {
+                ct_function_data_t data;
+                data.calls = QList<QString>();
+                data.refs = QMap<QString, bool>();
+                functions.insert(functionName, data);
+            }
+        } else {
+            match = call.match(line);
+
+            if (match.hasMatch()) {
+                target = match.captured("target");
+
+                if (target != "__stack_chk_fail") {
+                    if (!exclude.match(target).hasMatch() && !functions[functionName].calls.contains(target)) {
+                        ui->resultTextEdit->append("   |_____" + target);
+                        functions[functionName].calls.append(target);
+                    }
+                }
+            } else {
+                match = symbol_ref.match(line);
+                
+                if (match.hasMatch()) {
+                    target = match.captured("target");
+                    if (functions[functionName].refs.contains(target)) {
+                        functions[functionName].refs[target] = true;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void CallTree::on_browserButton_clicked()
