@@ -14,14 +14,14 @@ protected:
     }
 };
 
-TEST_F(CallTreeTestGetMode, GetMode_Build) {
+TEST_F(CallTreeTestGetMode, GetMode_001) {
     EXPECT_EQ(callTree->getMode("Build"), BUILD);
 }
 
-TEST_F(CallTreeTestGetMode, GetMode_Run) {
+TEST_F(CallTreeTestGetMode, GetMode_002) {
     EXPECT_EQ(callTree->getMode("Run"), RUN);
 }
 
-TEST_F(CallTreeTestGetMode, GetMode_Error) {
+TEST_F(CallTreeTestGetMode, GetMode_003) {
     EXPECT_EQ(callTree->getMode(""), MODE_ERROR);
 }

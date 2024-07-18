@@ -13,7 +13,7 @@ CallTree::~CallTree()
     delete ui;
 }
 
-ct_flag_t CallTree::getFlag(QString flag)
+ct_flag_t CallTree::getFlag(const QString flag)
 {
     ct_flag_t res;
 
@@ -28,7 +28,7 @@ ct_flag_t CallTree::getFlag(QString flag)
     return res;
 }
 
-ct_mode_t CallTree::getMode(QString mode)
+ct_mode_t CallTree::getMode(const QString mode)
 {
     ct_mode_t res;
 
@@ -43,30 +43,31 @@ ct_mode_t CallTree::getMode(QString mode)
     return res;
 }
 
-void CallTree::build()
+ct_status_t CallTree::build(
+    const QString path, const QString textPath, const QString option, QString directoryPath, QString filePath, QProcess *process
+)
 {
+    ct_status_t ret = STATUS_OK;
     QStringList gccArguments;
-    QProcess process;
     QRegularExpression re;
     QRegularExpressionMatch match;
-    QString txtPath =  ui->txtLineEdit->text();
 
     re.setPattern("^.*[\\\\/]");
-    match = re.match(m_path);
-    m_directory = match.hasMatch() ? match.captured(0) : "";
+    match = re.match(path);
+    directoryPath = match.hasMatch() ? match.captured(0) : "";
 
     re.setPattern("[^\\\\/]+$");
-    match = re.match(m_path);
-    m_file = match.hasMatch() ? match.captured(0) : "";
+    match = re.match(path);
+    filePath = match.hasMatch() ? match.captured(0) : "";
 
 #ifdef Q_OS_LINUX
-    if (!txtPath.isEmpty()) {
-        QFileInfo fileInfo(m_directory);
+    if (!textPath.isEmpty()) {
+        QFileInfo fileInfo(directoryPath);
         QString parentDir = fileInfo.dir().path();
-        QFile file(txtPath);
+        QFile file(textPath);
 
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-            return;
+            ret = STATUS_ERROR;
 
         QTextStream in(&file);
 
@@ -79,81 +80,69 @@ void CallTree::build()
 
                 if (projectIndex != -1) {
                     QString basePath = parentDir.left(projectIndex);
-                    QString suffix = m_directory.mid(basePath.length() + 1 + projectName.length());
-                    m_directory = basePath + projectName;
-                    qDebug() << "m_directory = " << m_directory;
-                    m_file = suffix + m_file;
-                    qDebug() << "m_file = " << m_file;
-                    gccArguments << "-c" << m_file;
+                    QString suffix = directoryPath.mid(basePath.length() + 1 + projectName.length());
+                    directoryPath = basePath + projectName;
+                    filePath = suffix + filePath;
+                    gccArguments << "-c" << filePath;
                 }
             }
         }
 
-        gccArguments << m_option;
+        gccArguments << option;
     } else {
-        gccArguments << "-c" << m_file << m_option;
+        gccArguments << "-c" << filePath << option;
     }
 
-    process.setWorkingDirectory(m_directory);
-    process.start("gcc", gccArguments);
+    process->setWorkingDirectory(directoryPath);
+    process->start("gcc", gccArguments);
 #elif defined(Q_OS_WIN)
     re.setPattern("^.*[\\\\/]");
-    match = re.match(m_path);
-    m_directory = match.hasMatch() ? match.captured(0) : "";
+    match = re.match(path);
+    directoryPath = match.hasMatch() ? match.captured(0) : "";
 
     re.setPattern("[^\\\\/]+$");
-    match = re.match(m_path);
-    m_file = match.hasMatch() ? match.captured(0) : "";
+    match = re.match(path);
+    filePath = match.hasMatch() ? match.captured(0) : "";
 
-    gccArguments << "-c" << m_file << m_option;
+    gccArguments << "-c" << filePath << option;
 
-    process.setWorkingDirectory(m_directory);
-    process.start("gcc", gccArguments);
+    process->setWorkingDirectory(directoryPath);
+    process->start("gcc", gccArguments);
 #endif
-    if (!process.waitForStarted()) {
-        QMessageBox::critical(nullptr, "Call Tree", "Failed to start process...");
-        return;
-    }
-
-    if (!process.waitForFinished()) {
-        QMessageBox::critical(nullptr, "Call Tree", "Process did not finish...");
-        return;
-    }
-
-    int result = process.exitCode();
-
-    if (result != 0) {
-        QMessageBox::critical(nullptr, "Call Tree", "Compilation failed...");
-    } else {
-        QMessageBox::information(nullptr, "Call Tree", "Compilation done...");
-    }
+    return ret;
 }
 
-void CallTree::run()
+ct_status_t CallTree::run(const ct_flag_t flag, const QString path)
 {
-    switch (m_flag) {
+    ct_status_t ret;
+
+    switch (flag) {
     case FSTACK_USAGE:
-        run_su_file();
+        ret = run_su_file(path);
         break;
     case FDUMP_RTL_EXPAND:
-        run_rtl_expand_file();
+        ret = run_rtl_expand_file(path);
         break;
     default:
+        ret = STATUS_ERROR;
         break;
     }
+
+    return ret;
 }
 
-void CallTree::run_su_file()
+ct_status_t CallTree::run_su_file(const QString path)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
 
+    ct_status_t ret = STATUS_OK;
     QRegularExpression re;
     QRegularExpressionMatch match;
-    QFile file(m_path);
+    QFile file(path);
 
     if (!file.open(QIODevice::ReadOnly))
-        return;
+        ret = STATUS_ERROR;
 
     QTextStream in(&file);
 
@@ -166,18 +155,21 @@ void CallTree::run_su_file()
             ui->resultTextEdit->append(match.captured(1) + " " + match.captured(2));
         }
     }
+
+    return ret;
 }
 
-void CallTree::run_rtl_expand_file()
+ct_status_t CallTree::run_rtl_expand_file(const QString path)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
 
-    QFile file(m_path);
+    ct_status_t ret = STATUS_OK;
+    QFile file(path);
     QMap<QString, ct_function_data_t> functions;
 
     if (!file.open(QIODevice::ReadOnly))
-        return;
+        ret = STATUS_ERROR;
 
     QTextStream in(&file);
 
@@ -226,6 +218,8 @@ void CallTree::run_rtl_expand_file()
             }
         }
     }
+
+    return ret;
 }
 
 void CallTree::on_browserButton_clicked()
@@ -244,10 +238,13 @@ void CallTree::on_txtBrowserButton_clicked()
 
 void CallTree::on_executeButton_clicked()
 {
-    ct_status_t res;
+    ct_status_t ret;
+    QString textFlag = ui->flagComboBox->currentText();
+    QString textMode = ui->modeComboBox->currentText();
+    QProcess process;
 
-    m_mode = getMode(ui->modeComboBox->currentText());
-    m_flag = getFlag(ui->flagComboBox->currentText());
+    m_flag = getFlag(textFlag);
+    m_mode = getMode(textMode);
 
     if (m_flag == FSTACK_USAGE) {
         m_option = "-fstack-usage";
@@ -259,12 +256,33 @@ void CallTree::on_executeButton_clicked()
 
     switch (m_mode) {
     case BUILD:
-        build();
+        {
+            ret = build(m_path, m_txt, m_option, m_directory, m_file, &process);
+
+            if (!process.waitForStarted()) {
+                QMessageBox::critical(nullptr, "Call Tree", "Failed to start process...");
+            }
+
+            if (!process.waitForFinished()) {
+                QMessageBox::critical(nullptr, "Call Tree", "Process did not finish...");
+            }
+
+            int result = process.exitCode();
+
+            if (result != 0) {
+                QMessageBox::critical(nullptr, "Call Tree", "Compilation failed...");
+            } else {
+                QMessageBox::information(nullptr, "Call Tree", "Compilation done...");
+            }
+        }
         break;
     case RUN:
-        run();
+        ret = run(m_flag, m_path);
         break;
     default:
+        ret = STATUS_ERROR;
         break;
     }
+
+    qDebug() << "ret = " << ret;
 }

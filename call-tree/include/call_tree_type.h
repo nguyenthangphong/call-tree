@@ -10,7 +10,7 @@ enum ct_flag_t {
 };
 
 enum ct_status_t {
-    STATUS_ERROR = -2, STATUS_FAIL, STATUS_OK
+    STATUS_ERROR = -1, STATUS_OK
 };
 
 typedef struct {

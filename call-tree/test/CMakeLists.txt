@@ -32,6 +32,7 @@ set(TESTS
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/unit_test/Test_GetFlag.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/unit_test/Test_GetMode.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit_test/Test_Run.cpp
 )
 
 add_executable(run_tests ${TESTS} ${SOURCES} ${HEADERS} ${UIS})
