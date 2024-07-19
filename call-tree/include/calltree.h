@@ -19,12 +19,15 @@ class CallTree : public QMainWindow
 public:
     CallTree(QWidget *parent = nullptr);
     ~CallTree();
-    ct_flag_t getFlag(const QString flag);
-    ct_mode_t getMode(const QString mode);
+    ct_flag_t get_flag(const QString flag);
+    ct_mode_t get_mode(const QString mode);
     ct_status_t build(const QString path, const QString textPath, const QString option, QString directoryPath, QString filePath, QProcess *process);
     ct_status_t run(const ct_flag_t flag, const QString path);
-    ct_status_t run_su_file(const QString path);
-    ct_status_t run_rtl_expand_file(const QString path);
+    ct_status_t run_su_file(const QString su_file);
+    ct_status_t run_rtl_expand_file(const QString rtl_expand_path);
+    QMap<QString, ct_function_data_t> get_function_name(QFile *file);
+    ct_status_t add_call_tree(const QMap<QString, ct_function_data_t> input, const QList<QString> list_target_functions, QMap<int, QMap<QString, QMap<QString, QString>>> output);
+    ct_status_t get_call_tree(); 
 
 private slots:
     void on_browserButton_clicked();

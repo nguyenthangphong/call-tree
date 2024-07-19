@@ -1,6 +1,11 @@
 #ifndef CALL_TREE_TYPE_H
 #define CALL_TREE_TYPE_H
 
+#define REGEX_GET_FUNCTION_MAIN              "^;; Function (?P<mangle>.*)\\s+\\((?P<function>\\S+)(,.*)?\\).*$"
+#define REGEX_GET_FUNCTION_CALLED            "^.*\\(call.*\"(?P<target>.*)\".*$"
+#define REGEX_GET_FUNCTION_SYMBOL_REF        "^.*\\(symbol_ref.*\"(?P<target>.*)\".*$"
+#define REGEX_GET_FUNCTION_EXCLUDE           "R_OSAL|memcpy"
+
 enum ct_mode_t {
     MODE_ERROR, BUILD, RUN
 };

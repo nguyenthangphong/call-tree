@@ -14,14 +14,14 @@ protected:
     }
 };
 
-TEST_F(CallTreeTestGetMode, GetMode_001) {
-    EXPECT_EQ(callTree->getMode("Build"), BUILD);
+TEST_F(CallTreeTestGetMode, get_mode_001) {
+    EXPECT_EQ(callTree->get_mode("Build"), BUILD);
 }
 
-TEST_F(CallTreeTestGetMode, GetMode_002) {
-    EXPECT_EQ(callTree->getMode("Run"), RUN);
+TEST_F(CallTreeTestGetMode, get_mode_002) {
+    EXPECT_EQ(callTree->get_mode("Run"), RUN);
 }
 
-TEST_F(CallTreeTestGetMode, GetMode_003) {
-    EXPECT_EQ(callTree->getMode(""), MODE_ERROR);
+TEST_F(CallTreeTestGetMode, get_mode_003) {
+    EXPECT_EQ(callTree->get_mode(""), MODE_ERROR);
 }

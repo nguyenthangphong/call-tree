@@ -13,7 +13,7 @@ CallTree::~CallTree()
     delete ui;
 }
 
-ct_flag_t CallTree::getFlag(const QString flag)
+ct_flag_t CallTree::get_flag(const QString flag)
 {
     ct_flag_t res;
 
@@ -28,7 +28,7 @@ ct_flag_t CallTree::getFlag(const QString flag)
     return res;
 }
 
-ct_mode_t CallTree::getMode(const QString mode)
+ct_mode_t CallTree::get_mode(const QString mode)
 {
     ct_mode_t res;
 
@@ -131,7 +131,7 @@ ct_status_t CallTree::run(const ct_flag_t flag, const QString path)
     return ret;
 }
 
-ct_status_t CallTree::run_su_file(const QString path)
+ct_status_t CallTree::run_su_file(const QString su_file)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
@@ -139,7 +139,7 @@ ct_status_t CallTree::run_su_file(const QString path)
     ct_status_t ret = STATUS_OK;
     QRegularExpression re;
     QRegularExpressionMatch match;
-    QFile file(path);
+    QFile file(su_file);
 
     if (!file.open(QIODevice::ReadOnly))
         ret = STATUS_ERROR;
@@ -159,61 +159,124 @@ ct_status_t CallTree::run_su_file(const QString path)
     return ret;
 }
 
-ct_status_t CallTree::run_rtl_expand_file(const QString path)
+QMap<QString, ct_function_data_t> CallTree::get_function_name(QFile *file)
+{
+    QTextStream stream(file);
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+    QString function_name;
+    QString target_name;
+    QMap<QString, ct_function_data_t> functions;
+
+    while (!stream.atEnd())
+    {
+        QString line = stream.readLine();
+
+        regex.setPattern(REGEX_GET_FUNCTION_MAIN);
+        match = regex.match(line);
+
+        if (match.hasMatch())
+        {
+            function_name = match.captured("function");
+            regex.setPattern(REGEX_GET_FUNCTION_EXCLUDE);
+            match = regex.match(function_name);
+
+            if (!functions.contains(function_name) && !match.hasMatch())
+            {
+                ct_function_data_t data;
+                data.calls = QList<QString>();
+                data.refs = QMap<QString, bool>();
+                functions.insert(function_name, data);
+            }
+        }
+        else
+        {
+            regex.setPattern(REGEX_GET_FUNCTION_CALLED);
+            match = regex.match(line);
+
+            if (match.hasMatch())
+            {
+                target_name = match.captured("target");
+
+                if (target_name != "__stack_chk_fail")
+                {
+                    regex.setPattern(REGEX_GET_FUNCTION_EXCLUDE);
+                    match = regex.match(target_name);
+
+                    if (!match.hasMatch() && !functions[function_name].calls.contains(target_name))
+                    {
+                        functions[function_name].calls.append(target_name);
+                    }
+                }
+                else
+                {
+                    regex.setPattern(REGEX_GET_FUNCTION_SYMBOL_REF);
+                    match = regex.match(line);
+                    
+                    if (match.hasMatch())
+                    {
+                        target_name = match.captured("target");
+
+                        if (functions[function_name].refs.contains(target_name))
+                        {
+                            functions[function_name].refs[target_name] = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return functions;
+}
+
+// ct_status_t CallTree::add_call_tree(
+//     const QMap<QString, ct_function_data_t> input, 
+//     const QList<QString> list_target_functions, 
+//     QMap<int, QMap<QString, QMap<QString, QString>>> output
+// )
+// {
+//     ct_status_t ret = STATUS_OK;
+
+
+//     return ret;
+// }
+
+// ct_status_t CallTree::get_call_tree()
+// {
+
+// }
+
+ct_status_t CallTree::run_rtl_expand_file(const QString rtl_expand_path)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
 
     ct_status_t ret = STATUS_OK;
-    QFile file(path);
+    QFile file(rtl_expand_path);
     QMap<QString, ct_function_data_t> functions;
 
     if (!file.open(QIODevice::ReadOnly))
+    {
         ret = STATUS_ERROR;
+    }
+    else
+    {
+        functions = get_function_name(&file);
 
-    QTextStream in(&file);
-
-    QRegularExpression function("^;; Function (?P<mangle>.*)\\s+\\((?P<function>\\S+)(,.*)?\\).*$");
-    QRegularExpression call("^.*\\(call.*\"(?P<target>.*)\".*$");
-    QRegularExpression symbol_ref("^.*\\(symbol_ref.*\"(?P<target>.*)\".*$");
-    QRegularExpression exclude("R_OSAL|memcpy");
-
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        QRegularExpressionMatch match = function.match(line);
-        QString functionName = "";
-        QString target = "";
-
-        if (match.hasMatch()) {
-            functionName = match.captured("function");
-            ui->resultTextEdit->append(functionName);
-
-            if (!functions.contains(functionName) && !exclude.match(functionName).hasMatch()) {
-                ct_function_data_t data;
-                data.calls = QList<QString>();
-                data.refs = QMap<QString, bool>();
-                functions.insert(functionName, data);
+        // Show functions in GUI
+        for (const QString function_main : functions.keys())
+        {
+            if (function_main.contains("R_IMPDRV"))
+            {
+                ui->resultTextEdit->append(function_main);
             }
-        } else {
-            match = call.match(line);
 
-            if (match.hasMatch()) {
-                target = match.captured("target");
-
-                if (target != "__stack_chk_fail") {
-                    if (!exclude.match(target).hasMatch() && !functions[functionName].calls.contains(target)) {
-                        ui->resultTextEdit->append("   |_____" + target);
-                        functions[functionName].calls.append(target);
-                    }
-                }
-            } else {
-                match = symbol_ref.match(line);
-                
-                if (match.hasMatch()) {
-                    target = match.captured("target");
-                    if (functions[functionName].refs.contains(target)) {
-                        functions[functionName].refs[target] = true;
-                    }
+            for (const ct_function_data_t functions_call : functions.values())
+            {
+                for (int i = 0; i < functions_call.calls.size(); i++)
+                {
+                    ui->resultTextEdit->append("|____" + functions_call.calls.at(i));
                 }
             }
         }
@@ -243,8 +306,8 @@ void CallTree::on_executeButton_clicked()
     QString textMode = ui->modeComboBox->currentText();
     QProcess process;
 
-    m_flag = getFlag(textFlag);
-    m_mode = getMode(textMode);
+    m_flag = get_flag(textFlag);
+    m_mode = get_mode(textMode);
 
     if (m_flag == FSTACK_USAGE) {
         m_option = "-fstack-usage";
