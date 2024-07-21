@@ -60,7 +60,6 @@ ct_status_t CallTree::build(
     match = re.match(path);
     filePath = match.hasMatch() ? match.captured(0) : "";
 
-#ifdef Q_OS_LINUX
     if (!textPath.isEmpty()) {
         QFileInfo fileInfo(directoryPath);
         QString parentDir = fileInfo.dir().path();
@@ -95,20 +94,7 @@ ct_status_t CallTree::build(
 
     process->setWorkingDirectory(directoryPath);
     process->start("gcc", gccArguments);
-#elif defined(Q_OS_WIN)
-    re.setPattern("^.*[\\\\/]");
-    match = re.match(path);
-    directoryPath = match.hasMatch() ? match.captured(0) : "";
 
-    re.setPattern("[^\\\\/]+$");
-    match = re.match(path);
-    filePath = match.hasMatch() ? match.captured(0) : "";
-
-    gccArguments << "-c" << filePath << option;
-
-    process->setWorkingDirectory(directoryPath);
-    process->start("gcc", gccArguments);
-#endif
     return ret;
 }
 
