@@ -13,101 +13,123 @@ CallTree::~CallTree()
     delete ui;
 }
 
-ct_flag_t CallTree::get_flag(const QString flag)
+ct_flag_t CallTree::getFlag(const QString flag)
 {
-    ct_flag_t res;
+    ct_flag_t ret;
 
-    if (flag == "Stack Size") {
-        res = FSTACK_USAGE;
-    } else if (flag == "RTL Expand") {
-        res = FDUMP_RTL_EXPAND;
-    } else {
-        res = FLAG_ERROR;
+    if (flag == "Stack Size")
+    {
+        ret = FSTACK_USAGE;
+    }
+    else if (flag == "RTL Expand")
+    {
+        ret = FDUMP_RTL_EXPAND;
+    }
+    else
+    {
+        ret = FLAG_ERROR;
     }
 
-    return res;
+    return ret;
 }
 
-ct_mode_t CallTree::get_mode(const QString mode)
+ct_mode_t CallTree::getMode(const QString mode)
 {
-    ct_mode_t res;
+    ct_mode_t ret;
 
-    if (mode == "Build") {
-        res = BUILD;
-    } else if (mode == "Run") {
-        res = RUN;
-    } else {
-        res = MODE_ERROR;
+    if (mode == "Build")
+    {
+        ret = BUILD;
+    }
+    else if (mode == "Run")
+    {
+        ret = RUN;
+    }
+    else
+    {
+        ret = MODE_ERROR;
     }
 
-    return res;
+    return ret;
 }
 
-ct_status_t CallTree::build(
-    const QString path, const QString textPath, const QString option, QString directoryPath, QString filePath, QProcess *process
+ct_status_t CallTree::buildCompiler(
+    const QString filePath, const QString textPath, const QString option, QString directoryName, QString fileName, QProcess *process
 )
 {
     ct_status_t ret = STATUS_OK;
     QStringList gccArguments;
-    QRegularExpression re;
+    QRegularExpression regex;
     QRegularExpressionMatch match;
 
-    re.setPattern("^.*[\\\\/]");
-    match = re.match(path);
-    directoryPath = match.hasMatch() ? match.captured(0) : "";
+    regex.setPattern("^.*[\\\\/]");
+    match = regex.match(filePath);
+    directoryName = match.hasMatch() ? match.captured(0) : "";
 
-    re.setPattern("[^\\\\/]+$");
-    match = re.match(path);
-    filePath = match.hasMatch() ? match.captured(0) : "";
+    regex.setPattern("[^\\\\/]+$");
+    match = regex.match(filePath);
+    fileName = match.hasMatch() ? match.captured(0) : "";
 
-    if (!textPath.isEmpty()) {
-        QFileInfo fileInfo(directoryPath);
+    if (!textPath.isEmpty())
+    {
+        QFileInfo fileInfo(directoryName);
         QString parentDir = fileInfo.dir().path();
         QFile file(textPath);
 
         if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
             ret = STATUS_ERROR;
+        }
 
         QTextStream in(&file);
 
-        while (!in.atEnd()) {
+        while (!in.atEnd())
+        {
             QString line = in.readLine();
-            if (line.contains("include")) gccArguments << "-I" + line;
-            else {
+            if (line.contains("include"))
+            {
+                gccArguments << "-I" + line;
+            }
+            else
+            {
                 QString projectName = line;
                 int projectIndex = parentDir.indexOf(projectName);
 
-                if (projectIndex != -1) {
+                if (projectIndex != -1)
+                {
                     QString basePath = parentDir.left(projectIndex);
-                    QString suffix = directoryPath.mid(basePath.length() + 1 + projectName.length());
-                    directoryPath = basePath + projectName;
-                    filePath = suffix + filePath;
+                    QString suffix = directoryName.mid(basePath.length() + 1 + projectName.length());
+                    directoryName = basePath + projectName;
+                    fileName = suffix + filePath;
                     gccArguments << "-c" << filePath;
                 }
             }
         }
 
         gccArguments << option;
-    } else {
+    }
+    else
+    {
         gccArguments << "-c" << filePath << option;
     }
 
-    process->setWorkingDirectory(directoryPath);
+    process->setWorkingDirectory(directoryName);
     process->start("gcc", gccArguments);
 
     return ret;
 }
 
-ct_status_t CallTree::run(const ct_flag_t flag, const QString path)
+ct_status_t CallTree::runFile(const ct_flag_t flag, const QString filePath)
 {
     ct_status_t ret;
 
-    switch (flag) {
+    switch (flag)
+    {
     case FSTACK_USAGE:
-        ret = run_su_file(path);
+        ret = runStackUsageFile(filePath);
         break;
     case FDUMP_RTL_EXPAND:
-        ret = run_rtl_expand_file(path);
+        ret = runRTLExpandFile(filePath);
         break;
     default:
         ret = STATUS_ERROR;
@@ -117,27 +139,32 @@ ct_status_t CallTree::run(const ct_flag_t flag, const QString path)
     return ret;
 }
 
-ct_status_t CallTree::run_su_file(const QString su_file)
+ct_status_t CallTree::runStackUsageFile(const QString stackUsageFile)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
 
     ct_status_t ret = STATUS_OK;
-    QRegularExpression re;
+    QRegularExpression regex;
     QRegularExpressionMatch match;
-    QFile file(su_file);
+    QFile file(stackUsageFile);
 
-    if (!file.open(QIODevice::ReadOnly))
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
         ret = STATUS_ERROR;
+    }
 
-    QTextStream in(&file);
+    QTextStream stream(&file);
 
-    while (!in.atEnd()) {
-        re.setPattern(":(\\w+)\\t(\\d+)\\t");
-        QString line = in.readLine();
-        match = re.match(line);
+    while (!stream.atEnd())
+    {
+        QString line = stream.readLine();
 
-        if (match.hasMatch()) {
+        regex.setPattern(":(\\w+)\\t(\\d+)\\t");
+        match = regex.match(line);
+
+        if (match.hasMatch())
+        {
             ui->resultTextEdit->append(match.captured(1) + " " + match.captured(2));
         }
     }
@@ -145,126 +172,90 @@ ct_status_t CallTree::run_su_file(const QString su_file)
     return ret;
 }
 
-QMap<QString, ct_function_data_t> CallTree::get_function_name(QFile *file)
+QMap<QString, QStringList> CallTree::getFunctionAndCall(QFile *file)
 {
-    QTextStream stream(file);
     QRegularExpression regex;
     QRegularExpressionMatch match;
-    QString function_name;
-    QString target_name;
-    QMap<QString, ct_function_data_t> functions;
+    QString functionName;
+    QString targetName;
+    QMap<QString, QStringList> functionMainAndListFunctionCall;
+    QTextStream stream(file);
 
     while (!stream.atEnd())
     {
         QString line = stream.readLine();
 
-        regex.setPattern(REGEX_GET_FUNCTION_MAIN);
+        regex.setPattern("^;; Function (?P<mangle>.*)\\s+\\((?P<function>\\S+)(,.*)?\\).*$");
         match = regex.match(line);
 
         if (match.hasMatch())
         {
-            function_name = match.captured("function");
-            regex.setPattern(REGEX_GET_FUNCTION_EXCLUDE);
-            match = regex.match(function_name);
+            functionName = match.captured("function");
+            regex.setPattern("R_OSAL|memcpy");
+            match = regex.match(functionName);
 
-            if (!functions.contains(function_name) && !match.hasMatch())
+            if (!functionMainAndListFunctionCall.contains(functionName) && !match.hasMatch())
             {
-                ct_function_data_t data;
-                data.calls = QList<QString>();
-                data.refs = QMap<QString, bool>();
-                functions.insert(function_name, data);
+                functionMainAndListFunctionCall.insert(functionName, QStringList());
             }
         }
         else
         {
-            regex.setPattern(REGEX_GET_FUNCTION_CALLED);
+            regex.setPattern("^.*\\(call.*\"(?P<target>.*)\".*$");
             match = regex.match(line);
 
             if (match.hasMatch())
             {
-                target_name = match.captured("target");
+                targetName = match.captured("target");
 
-                if (target_name != "__stack_chk_fail")
+                if (targetName != "__stack_chk_fail")
                 {
-                    regex.setPattern(REGEX_GET_FUNCTION_EXCLUDE);
-                    match = regex.match(target_name);
+                    regex.setPattern("R_OSAL|memcpy");
+                    match = regex.match(targetName);
 
-                    if (!match.hasMatch() && !functions[function_name].calls.contains(target_name))
+                    if (!match.hasMatch() && !functionMainAndListFunctionCall[functionName].contains(targetName))
                     {
-                        functions[function_name].calls.append(target_name);
-                    }
-                }
-                else
-                {
-                    regex.setPattern(REGEX_GET_FUNCTION_SYMBOL_REF);
-                    match = regex.match(line);
-                    
-                    if (match.hasMatch())
-                    {
-                        target_name = match.captured("target");
-
-                        if (functions[function_name].refs.contains(target_name))
-                        {
-                            functions[function_name].refs[target_name] = true;
-                        }
+                        functionMainAndListFunctionCall[functionName].append(targetName);
                     }
                 }
             }
         }
     }
 
-    return functions;
+    return functionMainAndListFunctionCall;
 }
 
-// ct_status_t CallTree::add_call_tree(
-//     const QMap<QString, ct_function_data_t> input, 
-//     const QList<QString> list_target_functions, 
-//     QMap<int, QMap<QString, QMap<QString, QString>>> output
-// )
-// {
-//     ct_status_t ret = STATUS_OK;
-
-
-//     return ret;
-// }
-
-// ct_status_t CallTree::get_call_tree()
-// {
-
-// }
-
-ct_status_t CallTree::run_rtl_expand_file(const QString rtl_expand_path)
+ct_status_t CallTree::runRTLExpandFile(const QString rtlExpandFile)
 {
     // Clear data before read other file
     ui->resultTextEdit->setText("");
 
     ct_status_t ret = STATUS_OK;
-    QFile file(rtl_expand_path);
-    QMap<QString, ct_function_data_t> functions;
+    QFile file(rtlExpandFile);
+    QMap<QString, QStringList> functionMainAndListFunctionCall;
 
-    if (!file.open(QIODevice::ReadOnly))
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         ret = STATUS_ERROR;
     }
     else
     {
-        functions = get_function_name(&file);
+        functionMainAndListFunctionCall = getFunctionAndCall(&file);
 
         // Show functions in GUI
-        for (const QString function_main : functions.keys())
+        for (auto index = functionMainAndListFunctionCall.begin(); index != functionMainAndListFunctionCall.end(); ++index)
         {
-            if (function_main.contains("R_IMPDRV"))
+            QString functionMain = index.key();
+            QStringList listFunctionCall = index.value();
+
+            ui->resultTextEdit->append("Function main: " + functionMain);
+
+            for (const QString &functionCall : listFunctionCall)
             {
-                ui->resultTextEdit->append(function_main);
+                ui->resultTextEdit->append(functionCall + " called by " + functionMain);
             }
 
-            for (const ct_function_data_t functions_call : functions.values())
-            {
-                for (int i = 0; i < functions_call.calls.size(); i++)
-                {
-                    ui->resultTextEdit->append("|____" + functions_call.calls.at(i));
-                }
-            }
+            ui->resultTextEdit->append("----------------------------------");
         }
     }
 
@@ -273,60 +264,75 @@ ct_status_t CallTree::run_rtl_expand_file(const QString rtl_expand_path)
 
 void CallTree::on_browserButton_clicked()
 {
-    m_path = QFileDialog::getOpenFileName(this, "Open File");
-    if (m_path.isEmpty()) return;
-    ui->fileNameLineEdit->setText(m_path);
+    QString filePath = QFileDialog::getOpenFileName(this, "Open File");
+    if (filePath.isEmpty()) return;
+    ui->fileNameLineEdit->setText(filePath);
 }
 
 void CallTree::on_txtBrowserButton_clicked()
 {
-    m_txt = QFileDialog::getOpenFileName(this, "Open File");
-    if (m_txt.isEmpty()) return;
-    ui->txtLineEdit->setText(m_txt);
+    QString textPath = QFileDialog::getOpenFileName(this, "Open File");
+    if (textPath.isEmpty()) return;
+    ui->txtLineEdit->setText(textPath);
 }
 
 void CallTree::on_executeButton_clicked()
 {
-    ct_status_t ret;
-    QString textFlag = ui->flagComboBox->currentText();
-    QString textMode = ui->modeComboBox->currentText();
+    ct_status_t ret = STATUS_OK;
+    QString textFlag, textMode, filePath, textPath, directoryName, fileName, option;
     QProcess process;
+    ct_flag_t flag;
+    ct_mode_t mode;
 
-    m_flag = get_flag(textFlag);
-    m_mode = get_mode(textMode);
+    filePath = ui->fileNameLineEdit->text();
+    textPath = ui->txtLineEdit->text();
 
-    if (m_flag == FSTACK_USAGE) {
-        m_option = "-fstack-usage";
+    textFlag = ui->flagComboBox->currentText();
+    flag = getFlag(textFlag);
+
+    if (flag == FSTACK_USAGE)
+    {
+        option = "-fstack-usage";
     }
 
-    if (m_flag == FDUMP_RTL_EXPAND) {
-        m_option = "-fdump-rtl-expand";
+    if (flag == FDUMP_RTL_EXPAND)
+    {
+        option = "-fdump-rtl-expand";
     }
 
-    switch (m_mode) {
+    textMode = ui->modeComboBox->currentText();
+    mode = getMode(textMode);
+
+    switch (mode)
+    {
     case BUILD:
         {
-            ret = build(m_path, m_txt, m_option, m_directory, m_file, &process);
+            ret = buildCompiler(filePath, textPath, option, directoryName, fileName, &process);
 
-            if (!process.waitForStarted()) {
+            if (!process.waitForStarted())
+            {
                 QMessageBox::critical(nullptr, "Call Tree", "Failed to start process...");
             }
 
-            if (!process.waitForFinished()) {
+            if (!process.waitForFinished())
+            {
                 QMessageBox::critical(nullptr, "Call Tree", "Process did not finish...");
             }
 
             int result = process.exitCode();
 
-            if (result != 0) {
+            if (result != 0)
+            {
                 QMessageBox::critical(nullptr, "Call Tree", "Compilation failed...");
-            } else {
+            }
+            else
+            {
                 QMessageBox::information(nullptr, "Call Tree", "Compilation done...");
             }
         }
         break;
     case RUN:
-        ret = run(m_flag, m_path);
+        ret = runFile(flag, filePath);
         break;
     default:
         ret = STATUS_ERROR;

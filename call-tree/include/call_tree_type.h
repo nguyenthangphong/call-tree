@@ -18,9 +18,4 @@ enum ct_status_t {
     STATUS_ERROR = -1, STATUS_OK
 };
 
-typedef struct {
-    QList<QString> calls;
-    QMap<QString, bool> refs;
-} ct_function_data_t;
-
 #endif // CALL_TREE_TYPE_H
