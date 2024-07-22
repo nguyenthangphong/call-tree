@@ -248,14 +248,14 @@ ct_status_t CallTree::runRTLExpandFile(const QString rtlExpandFile)
             QString functionMain = index.key();
             QStringList listFunctionCall = index.value();
 
-            ui->resultTextEdit->append("Function main: " + functionMain);
+            ui->resultTextEdit->append(functionMain);
 
             for (const QString &functionCall : listFunctionCall)
             {
-                ui->resultTextEdit->append(functionCall + " called by " + functionMain);
+                ui->resultTextEdit->append("---->" + functionCall);
             }
 
-            ui->resultTextEdit->append("----------------------------------");
+            ui->resultTextEdit->append("--------------------------------------------------");
         }
     }
 
