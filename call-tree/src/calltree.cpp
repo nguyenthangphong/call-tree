@@ -191,10 +191,8 @@ QMap<QString, QStringList> CallTree::getFunctionAndCall(QFile *file)
         if (match.hasMatch())
         {
             functionName = match.captured("function");
-            regex.setPattern("R_OSAL|memcpy");
-            match = regex.match(functionName);
 
-            if (!functionMainAndListFunctionCall.contains(functionName) && !match.hasMatch())
+            if (!functionMainAndListFunctionCall.contains(functionName))
             {
                 functionMainAndListFunctionCall.insert(functionName, QStringList());
             }
@@ -208,15 +206,9 @@ QMap<QString, QStringList> CallTree::getFunctionAndCall(QFile *file)
             {
                 targetName = match.captured("target");
 
-                if (targetName != "__stack_chk_fail")
+                if (!functionMainAndListFunctionCall[functionName].contains(targetName))
                 {
-                    regex.setPattern("R_OSAL|memcpy");
-                    match = regex.match(targetName);
-
-                    if (!match.hasMatch() && !functionMainAndListFunctionCall[functionName].contains(targetName))
-                    {
-                        functionMainAndListFunctionCall[functionName].append(targetName);
-                    }
+                    functionMainAndListFunctionCall[functionName].append(targetName);
                 }
             }
         }
